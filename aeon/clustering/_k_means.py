@@ -1,4 +1,5 @@
 from aeon.clustering import BaseClusterer
+import numpy as np
 
 class Kmeans(BaseClusterer):
 
@@ -19,7 +20,7 @@ class Kmeans(BaseClusterer):
         self.inertia_ = None
         self.n_iter_ = None
 
-    def fit(self, X: np.ndarray, y: Optional[np.ndarray] = None, sample_weight: Optional[np.ndarray] = None) -> 'Kmeans':
+    def fit(self, X: np.ndarray, y: np.ndarray = None, sample_weight: np.ndarray = None) -> 'Kmeans':
         """Compute k-means clustering.
 
         Parameters
