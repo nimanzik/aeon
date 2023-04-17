@@ -13,16 +13,9 @@ from aeon.distances import distance_from_multiple_to_multiple
 InitCallable = Callable[[np.ndarray, int, RandomState, dict], np.ndarray]
 CenterComputeCallable = Callable[[np.ndarray, dict], np.ndarray]
 
-init_algorithm_dict = {
-    "forgy": "forgy_center_initializer",
-    "random": "random_center_initializer",
-    "kmeans++": "kmeans_plus_plus",
-}
 
-
-def check_init_algorithm(
-        init_algorithm: Union[str, np.ndarray, InitCallable], n_clusters: int
-) -> InitCallable:
+def check_init_algorithm(init_algorithm: Union[str, np.ndarray, InitCallable],
+                         n_clusters: int) -> InitCallable:
     """Check the initialization algorithm.
 
     If an array is passed in then it is wrapped in a function to be consistent with
@@ -41,7 +34,7 @@ def check_init_algorithm(
 
     Returns
     -------
-    Callable[[np.ndarray, int, np.random.RandomState, dict], np.ndarray]
+    InitCallable
         An initialization callable
     """
     if isinstance(init_algorithm, str):
@@ -62,7 +55,7 @@ def check_init_algorithm(
             return init_algorithm
 
         return _inner_init_algorithm
-    elif callable(init_algorithm):
+    elif isinstance(init_algorithm, Callable):
         return init_algorithm
     else:
         raise ValueError(
@@ -143,7 +136,7 @@ def random_center_initializer(
     return new_centres
 
 
-def kmeans_plus_plus(
+def kmeans_plus_plus_initializer(
         X: np.ndarray,
         n_clusters: int,
         random_state: np.random.RandomState,
@@ -230,3 +223,10 @@ def kmeans_plus_plus(
         centers[c] = X[best_candidate]
 
     return centers
+
+
+init_algorithm_dict = {
+    "forgy": forgy_center_initializer,
+    "random": random_center_initializer,
+    "kmeans++": kmeans_plus_plus_in,
+}

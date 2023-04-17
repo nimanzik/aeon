@@ -1,11 +1,17 @@
-from typing import Optional, Union, Dict
+from abc import ABC
+from typing import Optional, Union, Tuple
+
+from numpy.random import RandomState
+
 from aeon.clustering import BaseClusterer
-from aeon.clustering._init_algorithms import check_init_algorithm
+from aeon.clustering._init_algorithms import InitCallable, check_init_algorithm
 from sklearn.utils import check_random_state
 import numpy as np
 
+from aeon.clustering.base import TimeSeriesInstances
 
 class Kmeans(BaseClusterer):
+
     _tags = {
         "capability:multivariate": True,
     }
@@ -13,7 +19,7 @@ class Kmeans(BaseClusterer):
     def __init__(
             self,
             n_clusters: int = 8,
-            init: Union[str, np.ndarray] = 'forgy',
+            init: Union[str, np.ndarray, InitCallable] = 'forgy',
             metric: str = 'dtw',
             n_init: int = 10,
             max_iter: int = 30,
@@ -43,8 +49,6 @@ class Kmeans(BaseClusterer):
         self.n_iter_ = 0
 
         self._random_state = None
-        self._init = None
-
         self._average_params = average_params
         if average_params is None:
             self._average_params = {}
@@ -61,8 +65,7 @@ class Kmeans(BaseClusterer):
         self.n_iter_ = None
         super(Kmeans, self).__init__(n_clusters=n_clusters)
 
-    def fit(self, X: np.ndarray, y: np.ndarray = None,
-            sample_weight: np.ndarray = None) -> 'Kmeans':
+    def _fit(self, X: TimeSeriesInstances, y=None) -> 'Kmeans':
         """Compute k-means clustering.
 
         Parameters
@@ -81,13 +84,27 @@ class Kmeans(BaseClusterer):
             Fitted estimator.
         """
         self._random_state = check_random_state(self.random_state)
-        self._init = check_init_algorithm(self.init, self.n_clusters)
+        init_callable = check_init_algorithm(self.init, self.n_clusters)
 
         best_centers = None
         best_interia = np.inf
         best_labels = None
         best_n_iter = None
         for _ in range(self.n_init):
-
-
+            centers = init_callable(
+                X, self.n_clusters, self._random_state, self._init_params
+            )
+            labels, centers, inertia, n_iter = fit_one_init(X, centers)
         return self
+
+    def _score(self, X, y=None):
+        pass
+
+    def _predict(self, X: TimeSeriesInstances, y=None) -> np.ndarray:
+        pass
+
+# @njit(fastmath=True, cache=True)
+def fit_one_init(
+        X: np.ndarray, cluster_centers: np.ndarray
+) -> Tuple[np.ndarray, np.ndarray, float, int]:
+    pass
