@@ -228,5 +228,5 @@ def kmeans_plus_plus_initializer(
 init_algorithm_dict = {
     "forgy": forgy_center_initializer,
     "random": random_center_initializer,
-    "kmeans++": kmeans_plus_plus_in,
+    "kmeans++": kmeans_plus_plus_initializer,
 }
