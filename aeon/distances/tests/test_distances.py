@@ -75,3 +75,10 @@ def test_distances(dist):
         dist["distance"],
         _expected_distance_results[dist["name"]][4],
     )
+
+def test_dtw():
+    X = create_test_distance_numpy(10, 5)
+    y = create_test_distance_numpy(10, 10, random_state=2)
+    from aeon.distances import dtw_distance
+    test = dtw_distance(X, y, window=0.)
+    stop = ""
