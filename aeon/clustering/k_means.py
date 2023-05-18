@@ -8,11 +8,11 @@ import numpy as np
 from numpy.random import RandomState
 
 from aeon.clustering.metrics.averaging import _resolve_average_callable
-from aeon.clustering.partitioning import TimeSeriesLloyds
-from aeon.distances import pairwise_distance
+from aeon.clustering.base import BaseClusterer
+from aeon.distances import get_distance_function, pairwise_distance
 
 
-class TimeSeriesKMeans(TimeSeriesLloyds):
+class TimeSeriesKMeans(BaseClusterer):
     """Time series K-means clustering algorithm.
 
     Parameters
@@ -26,7 +26,7 @@ class TimeSeriesKMeans(TimeSeriesLloyds):
     metric: str or Callable, defaults = 'dtw'
         Distance metric to compute similarity between time series. Any of the following
         are valid: ['dtw', 'euclidean', 'erp', 'edr', 'lcss', 'squared', 'ddtw', 'wdtw',
-        'wddtw'].
+        'wddtw', 'msm', 'twe'].
     n_init: int, defaults = 10
         Number of times the k-means algorithm will be run with different
         centroid seeds. The final result will be the best output of n_init
@@ -80,38 +80,35 @@ class TimeSeriesKMeans(TimeSeriesLloyds):
         distance_params: dict = None,
         average_params: dict = None,
     ):
+        self.init_algorithm = init_algorithm
+        self.metric = metric
+        self.n_init = n_init
+        self.max_iter = max_iter
+        self.tol = tol
+        self.verbose = verbose
+        self.random_state = random_state
+
         self.averaging_method = averaging_method
         self._averaging_method = _resolve_average_callable(averaging_method)
+
+        self.distance_params = distance_params
+        self._distance_params = distance_params
+        if distance_params is None:
+            self._distance_params = {}
 
         self.average_params = average_params
         self._average_params = average_params
         if self.average_params is None:
             self._average_params = {}
-        if averaging_method == "dba":
-            self._dba_medoids_distance_metric = "dtw"
-            self._precomputed_pairwise = None
-            if "medoids_distance_metric" in self._average_params:
-                self._dba_medoids_distance_metric = self._average_params[
-                    "medoids_distance_metric"
-                ]
-            if "averaging_distance_metric" in self._average_params:
-                average_dist = self._average_params["averaging_distance_metric"]
-                if average_dist == "ddtw":
-                    self._average_params["averaging_distance_metric"] = "dtw"
-                if average_dist == "wddtw":
-                    self._average_params["averaging_distance_metric"] = "wdtw"
 
-        super(TimeSeriesKMeans, self).__init__(
-            n_clusters,
-            init_algorithm,
-            metric,
-            n_init,
-            max_iter,
-            tol,
-            verbose,
-            random_state,
-            distance_params,
-        )
+        self.cluster_centers_ = None
+        self.labels_ = None
+        self.inertia_ = None
+        self.n_iter_ = 0
+
+        self._random_state = None
+        self._init_algorithm = None
+        super(TimeSeriesKMeans, self).__init__(n_clusters)
 
     def _fit(self, X: np.ndarray, y=None) -> np.ndarray:
         """Fit time series clusterer to training data.
@@ -128,11 +125,26 @@ class TimeSeriesKMeans(TimeSeriesLloyds):
         self:
             Fitted estimator.
         """
-        if self.averaging_method == "dba":
-            self._precomputed_pairwise = pairwise_distance(
-                X, metric=self._dba_medoids_distance_metric, **self._average_params
-            )
-        return super()._fit(X, y)
+        self._random_state = check_random_state(self.random_state)
+        self._distance_metric = get_distance_function(metric=self.metric)
+        best_centers = None
+        best_inertia = np.inf
+        best_labels = None
+        best_iters = self.max_iter
+        for _ in range(self.n_init):
+            labels, centers, inertia, n_iters = self._fit_one_init(X)
+            if inertia < best_inertia:
+                best_centers = centers
+                best_labels = labels
+                best_inertia = inertia
+                best_iters = n_iters
+
+        self.labels_ = best_labels
+        self.inertia_ = best_inertia
+        self.cluster_centers_ = best_centers
+        self.n_iter_ = best_iters
+        return self
+
 
     def _compute_new_cluster_centers(
         self, X: np.ndarray, assignment_indexes: np.ndarray
