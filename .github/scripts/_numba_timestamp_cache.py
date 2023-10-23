@@ -10,6 +10,7 @@ def _apply_timestamps(directory, reference_file):
     for root, _, files in os.walk(directory):
         for name in files:
             filepath = os.path.join(root, name)
+            print(f"Setting timestamp for {filepath}")  # noqa: T001, T201
             os.utime(filepath, (reference_mtime, reference_mtime))
 
 
