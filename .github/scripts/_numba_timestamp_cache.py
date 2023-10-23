@@ -5,6 +5,7 @@ import sys
 def _apply_timestamps(directory, reference_file):
     # get the python file stamps
     reference_mtime = os.path.getmtime(reference_file)
+    print(f"Setting timestamps to {reference_mtime}")  # noqa: T001, T201
 
     for root, _, files in os.walk(directory):
         for name in files:
